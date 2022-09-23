@@ -21,8 +21,6 @@ Platform | Description
 
 The sensor retrieves information using [Carbon Intensity UK API library (forked)](https://github.com/alanmcgore/carbonintensity) - It adds in additional data based on [work by jfparis in his fork](https://github.com/jfparis/sensor.carbon_intensity_uk) as well as a percentage of the grid in low carbon energy and potentially additional entities. 
 
-![alt Sensor attributes][attributesimg]
-
 ## Installation
 
 1. Using the tool of choice open the directory (folder) for your HA configuration (where you find `configuration.yaml`).
