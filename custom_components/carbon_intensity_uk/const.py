@@ -3,9 +3,9 @@
 NAME = "Carbon Intensity UK"
 DOMAIN = "carbon_intensity_uk"
 DOMAIN_DATA = f"{DOMAIN}_data"
-VERSION = "0.0.3"
+VERSION = "0.0.4"
 
-ISSUE_URL = "https://github.com/jscruz/sensor.carbon_intensity_uk/issues"
+ISSUE_URL = "https://github.com/alanmcgore/sensor.carbon_intensity_uk/issues"
 
 # Icons
 ICON = "mdi:leaf"
@@ -28,6 +28,13 @@ CONF_POSTCODE = "postcode"
 # Defaults
 DEFAULT_NAME = DOMAIN
 
+INTENSITY = {
+    "very low" : 0,
+    "low" : 1,
+    "moderate": 2,
+    "high": 3,
+    "very high": 4,
+}
 
 STARTUP_MESSAGE = f"""
 -------------------------------------------------------------------

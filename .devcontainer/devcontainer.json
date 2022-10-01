@@ -1,6 +1,6 @@
 // See https://aka.ms/vscode-remote/devcontainer.json for format details.
 {
-	"image": "ludeeus/container:integration",
+	"image": "ludeeus/container:integration-debian",
 	"context": "..",
 	"appPort": [
 		"9123:8123"
@@ -12,8 +12,8 @@
 	],
 	"extensions": [
 		"ms-python.python",
-		"github.vscode-pull-request-github",
-		"tabnine.tabnine-vscode"
+		"github.vscode-pull-request-github"
+		// "tabnine.tabnine-vscode"
 	],
 	"settings": {
 		"files.eol": "\n",
