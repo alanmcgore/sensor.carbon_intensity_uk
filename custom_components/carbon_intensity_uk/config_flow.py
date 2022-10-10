@@ -1,17 +1,16 @@
 """Adds config flow for Carbon Intensity."""
+import logging
+from carbonintensity.client import Client as CarbonIntentisityApi
 import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.core import callback
-import logging
-_LOGGER = logging.getLogger(__name__)
-
-from carbonintensity.client import Client as CarbonIntentisityApi
-
-from custom_components.carbon_intensity_uk.const import (  # pylint: disable=unused-import
+from .const import (
     CONF_POSTCODE,
     DOMAIN,
     PLATFORMS,
 )
+
+_LOGGER = logging.getLogger(__name__)
 
 
 class CarbonIntensityFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
@@ -24,9 +23,7 @@ class CarbonIntensityFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         """Initialize."""
         self._errors = {}
 
-    async def async_step_user(
-        self, user_input=None  # pylint: disable=bad-continuation
-    ):
+    async def async_step_user(self, user_input=None):
         """Handle a flow initialized by the user."""
         self._errors = {}
 
@@ -58,7 +55,11 @@ class CarbonIntensityFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         """Show the configuration form to edit location data."""
         return self.async_show_form(
             step_id="user",
-            data_schema=vol.Schema({vol.Required(CONF_POSTCODE): str,}),
+            data_schema=vol.Schema(
+                {
+                    vol.Required(CONF_POSTCODE): str,
+                }
+            ),
             errors=self._errors,
         )
 

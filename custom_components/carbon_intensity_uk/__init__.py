@@ -6,7 +6,7 @@ https://github.com/alanmcgore/sensor.carbon_intensity_uk
 """
 import asyncio
 import logging
-from datetime import timedelta
+from datetime import datetime, timedelta
 from typing import Any, TypedDict, cast
 from collections.abc import Mapping
 
@@ -24,7 +24,6 @@ from .const import (
     STARTUP_MESSAGE,
 )
 
-PLATFORMS = [Platform.SENSOR]
 
 class CO2SignalData(TypedDict):
     """Data field."""
@@ -33,6 +32,9 @@ class CO2SignalData(TypedDict):
     fossilFuelPercentage: float
     forecast: list
     lowCarbonPercentage: float
+    status: str
+    optimalFrom: datetime
+    optimalTo: datetime
 
 
 class CO2SignalResponse(TypedDict):
@@ -61,26 +63,18 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     postcode = entry.data.get(CONF_POSTCODE)
     _LOGGER.debug("Postcode setup: %s" % postcode)
 
-    coordinator = CarbonIntensityDataUpdateCoordinator(hass, postcode=postcode)
+    coordinator = CarbonIntensityDataUpdateCoordinator(hass, entry, postcode=postcode)
     _LOGGER.debug("Coordinator refresh triggered")
-    await coordinator.async_refresh()
+    await coordinator.async_config_entry_first_refresh()
     _LOGGER.debug("Coordinator refresh completed")
-
     if not coordinator.last_update_success:
         raise ConfigEntryNotReady
+    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
 
-    hass.data[DOMAIN][entry.entry_id] = coordinator
+    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
-    for platform in PLATFORMS:
-        if entry.options.get(platform, True):
-            _LOGGER.debug("Found platform %s" % platform)
-            coordinator.platforms.append(platform)
-            hass.async_add_job(
-                hass.config_entries.async_forward_entry_setup(entry, platform)
-            )
-
-    entry.add_update_listener(async_reload_entry)
     return True
+
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry):
     """Handle removal of an entry."""
@@ -98,17 +92,28 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry):
         hass.data[DOMAIN].pop(entry.entry_id)
 
     return unloaded
+
+
 class CarbonIntensityDataUpdateCoordinator(DataUpdateCoordinator[CO2SignalResponse]):
     """Class to manage fetching data from the API."""
 
-    def __init__(self, hass, postcode):
+    def __init__(self, hass: HomeAssistant, entry: ConfigEntry, postcode):
         """Initialize."""
         self.api = CarbonIntensityApi(postcode)
         self.platforms = PLATFORMS
 
         super().__init__(
-            hass, _LOGGER, name=DOMAIN, update_interval=SCAN_INTERVAL,
+            hass,
+            _LOGGER,
+            name=DOMAIN,
+            update_interval=SCAN_INTERVAL,
         )
+        self._entry = entry
+
+    @property
+    def entry_id(self) -> str:
+        """Return entry ID."""
+        return self._entry.entry_id
 
     async def _async_update_data(self) -> CO2SignalResponse:
         """Update data via library."""
@@ -116,25 +121,36 @@ class CarbonIntensityDataUpdateCoordinator(DataUpdateCoordinator[CO2SignalRespon
             _LOGGER.debug("Coordinator update data async")
             data = await self.api.async_get_data()
             _LOGGER.debug("Coordinator update done")
-            responseData = CO2SignalData 
-            {
-                "carbonIntensity": data.get("current_period_national_forecast"), 
-                "fossilFuelPercentage":data.get("current_fossil_fuel_percentage"),
-                "forecast": data.get("forecast"),
-                "lowCarbonPercentage": data.get("current_low_carbon_percentage")
+            responseData: CO2SignalData = {
+                "carbonIntensity": data.get("data").get("current_period_forecast"),
+                "fossilFuelPercentage": data.get("data").get(
+                    "current_fossil_fuel_percentage"
+                ),
+                "forecast": data.get("data").get("forecast"),
+                "lowCarbonPercentage": data.get("data").get(
+                    "current_low_carbon_percentage"
+                ),
+                "status": data.get("data").get("current_period_index"),
+                "optimalTo": data.get("data").get("optimal_window_to"),
+                "optimalFrom": data.get("data").get("optimal_window_from"),
             }
 
-            response = CO2SignalResponse
-            {
-                "status": data.get("current_period_index"),
-                "data": responseData
-            }        
+            response: CO2SignalResponse = {
+                "status": data.get("data").get("current_period_index"),
+                "data": responseData,
+            }
+
+            _LOGGER.debug(
+                f"update_data carbonIntensity response is: {response['data']}"
+            )
             return response
 
         except Exception as exception:
             raise UpdateFailed(exception)
 
-    async def get_data(hass: HomeAssistant, config: Mapping[str, Any]) -> CO2SignalResponse:
+    async def get_data(
+        hass: HomeAssistant, config: Mapping[str, Any]
+    ) -> CO2SignalResponse:
         """Get data from the API."""
         if CONF_POSTCODE in config:
             postcode = None
@@ -143,21 +159,27 @@ class CarbonIntensityDataUpdateCoordinator(DataUpdateCoordinator[CO2SignalRespon
         api = CarbonIntensityApi(postcode)
         data = await api.async_get_data()
 
-        responseData = CO2SignalData 
-        {
-            "carbonIntensity": data.get("current_period_national_forecast"), 
-            "fossilFuelPercentage":data.get("current_fossil_fuel_percentage"),
-            "forecast": data.get("forecast"),
-            "lowCarbonPercentage": data.get("current_low_carbon_percentage")
+        responseData: CO2SignalData = {
+            "carbonIntensity": data.get("data").get("current_period_forecast"),
+            "fossilFuelPercentage": data.get("data").get(
+                "current_fossil_fuel_percentage"
+            ),
+            "forecast": data.get("data").get("forecast"),
+            "lowCarbonPercentage": data.get("data").get(
+                "current_low_carbon_percentage"
+            ),
+            "status": data.get("data").get("current_period_index"),
+            "optimalTo": data.get("data").get("optimal_window_to"),
+            "optimalFrom": data.get("data").get("optimal_window_from"),
         }
 
-        response = CO2SignalResponse
-        {
-            "status": data.get("current_period_index"),
-            "data": responseData
-        }    
-
+        response: CO2SignalResponse = {
+            "status": data.get("data").get("current_period_index"),
+            "data": responseData,
+        }
+        _LOGGER.debug(f"get_data response is: {response}")
         return response
+
 
 async def async_reload_entry(hass: HomeAssistant, entry: ConfigEntry):
     """Reload config entry."""

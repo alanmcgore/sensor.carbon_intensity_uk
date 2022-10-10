@@ -29,8 +29,8 @@ CONF_POSTCODE = "postcode"
 DEFAULT_NAME = DOMAIN
 
 INTENSITY = {
-    "very low" : 0,
-    "low" : 1,
+    "very low": 0,
+    "low": 1,
     "moderate": 2,
     "high": 3,
     "very high": 4,
